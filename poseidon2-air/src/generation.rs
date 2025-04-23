@@ -84,6 +84,7 @@ pub fn generate_trace_rows<
 >(
     inputs: Vec<[F; WIDTH]>,
     constants: &RoundConstants<F, WIDTH, HALF_FULL_ROUNDS, PARTIAL_ROUNDS>,
+    extra_capacity_bits: usize,
 ) -> RowMajorMatrix<F> {
     let n = inputs.len();
     assert!(
@@ -92,7 +93,7 @@ pub fn generate_trace_rows<
     );
 
     let ncols = num_cols::<WIDTH, SBOX_DEGREE, SBOX_REGISTERS, HALF_FULL_ROUNDS, PARTIAL_ROUNDS>();
-    let mut vec = Vec::with_capacity(n * ncols * 2);
+    let mut vec = Vec::with_capacity((n * ncols) << extra_capacity_bits);
     let trace = &mut vec.spare_capacity_mut()[..n * ncols];
     let trace = RowMajorMatrixViewMut::new(trace, ncols);
 
@@ -243,6 +244,14 @@ fn generate_partial_round<
     LinearLayers::internal_linear_layer(state);
 }
 
+/// Computes the S-box `x -> x^{DEGREE}` and stores the partial data required to
+/// verify the computation.
+///
+/// # Panics
+///
+/// This method panics if the number of `REGISTERS` is not chosen optimally for the given
+/// `DEGREE` or if the `DEGREE` is not supported by the S-box. The supported degrees are
+/// `3`, `5`, `7`, and `11`.
 #[inline]
 fn generate_sbox<F: PrimeField, const DEGREE: u64, const REGISTERS: usize>(
     sbox: &mut SBox<MaybeUninit<F>, DEGREE, REGISTERS>,

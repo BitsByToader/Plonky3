@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use core::fmt::Debug;
 
-use p3_field::Field;
+use p3_field::{ExtensionField, Field};
 use p3_matrix::Matrix;
 
 #[derive(Debug)]
@@ -35,7 +35,7 @@ impl<M> FriConfig<M> {
 
 /// Whereas `FriConfig` encompasses parameters the end user can set, `FriGenericConfig` is
 /// set by the PCS calling FRI, and abstracts over implementation details of the PCS.
-pub trait FriGenericConfig<F: Field> {
+pub trait FriGenericConfig<F: Field, EF: ExtensionField<F>> {
     type InputProof;
     type InputError: Debug;
 
@@ -50,20 +50,23 @@ pub trait FriGenericConfig<F: Field> {
         &self,
         index: usize,
         log_height: usize,
-        beta: F,
-        evals: impl Iterator<Item = F>,
-    ) -> F;
+        beta: EF,
+        evals: impl Iterator<Item = EF>,
+    ) -> EF;
 
     /// Same as applying fold_row to every row, possibly faster.
-    fn fold_matrix<M: Matrix<F>>(&self, beta: F, m: M) -> Vec<F>;
+    fn fold_matrix<M: Matrix<EF>>(&self, beta: EF, m: M) -> Vec<EF>;
 }
 
 /// Creates a minimal `FriConfig` for testing purposes.
 /// This configuration is designed to reduce computational cost during tests.
-pub const fn create_test_fri_config<Mmcs>(mmcs: Mmcs) -> FriConfig<Mmcs> {
+pub const fn create_test_fri_config<Mmcs>(
+    mmcs: Mmcs,
+    log_final_poly_len: usize,
+) -> FriConfig<Mmcs> {
     FriConfig {
-        log_blowup: 1,
-        log_final_poly_len: 0,
+        log_blowup: 2,
+        log_final_poly_len,
         num_queries: 2,
         proof_of_work_bits: 1,
         mmcs,

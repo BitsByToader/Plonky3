@@ -1,4 +1,4 @@
-use std::borrow::Borrow;
+use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir};
 use p3_baby_bear::{BabyBear, Poseidon2BabyBear};
@@ -13,7 +13,8 @@ use p3_matrix::dense::RowMajorMatrix;
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_symmetric::{PaddingFreeSponge, TruncatedPermutation};
 use p3_uni_stark::{StarkConfig, prove, verify};
-use rand::rng;
+use rand::SeedableRng;
+use rand::rngs::SmallRng;
 
 /// For testing the public values feature
 pub struct FibonacciAir {}
@@ -112,53 +113,57 @@ type Pcs = TwoAdicFriPcs<Val, Dft, ValMmcs, ChallengeMmcs>;
 type MyConfig = StarkConfig<Pcs, Challenge, Challenger>;
 
 /// n-th Fibonacci number expected to be x
-fn test_public_value_impl(n: usize, x: u64) {
-    let perm = Perm::new_from_rng_128(&mut rng());
+fn test_public_value_impl(n: usize, x: u64, log_final_poly_len: usize) {
+    let mut rng = SmallRng::seed_from_u64(1);
+    let perm = Perm::new_from_rng_128(&mut rng);
     let hash = MyHash::new(perm.clone());
     let compress = MyCompress::new(perm.clone());
     let val_mmcs = ValMmcs::new(hash, compress);
     let challenge_mmcs = ChallengeMmcs::new(val_mmcs.clone());
     let dft = Dft::default();
     let trace = generate_trace_rows::<Val>(0, 1, n);
-    let fri_config = create_test_fri_config(challenge_mmcs);
+    let fri_config = create_test_fri_config(challenge_mmcs, log_final_poly_len);
     let pcs = Pcs::new(dft, val_mmcs, fri_config);
-    let config = MyConfig::new(pcs);
-    let mut challenger = Challenger::new(perm.clone());
+    let challenger = Challenger::new(perm);
+
+    let config = MyConfig::new(pcs, challenger);
     let pis = vec![BabyBear::ZERO, BabyBear::ONE, BabyBear::from_u64(x)];
-    let proof = prove(&config, &FibonacciAir {}, &mut challenger, trace, &pis);
-    let mut challenger = Challenger::new(perm);
-    verify(&config, &FibonacciAir {}, &mut challenger, &proof, &pis).expect("verification failed");
+
+    let proof = prove(&config, &FibonacciAir {}, trace, &pis);
+    verify(&config, &FibonacciAir {}, &proof, &pis).expect("verification failed");
 }
 
 #[test]
 fn test_one_row_trace() {
-    test_public_value_impl(1, 1);
+    // Need to set log_final_poly_len to ensure log_min_height > config.log_final_poly_len + config.log_blowup
+    test_public_value_impl(1, 1, 0);
 }
 
 #[test]
 fn test_public_value() {
-    test_public_value_impl(1 << 3, 21);
+    test_public_value_impl(1 << 3, 21, 2);
 }
 
 #[cfg(debug_assertions)]
 #[test]
 #[should_panic(expected = "assertion `left == right` failed: constraints had nonzero value")]
 fn test_incorrect_public_value() {
-    let perm = Perm::new_from_rng_128(&mut rng());
+    let mut rng = SmallRng::seed_from_u64(1);
+    let perm = Perm::new_from_rng_128(&mut rng);
     let hash = MyHash::new(perm.clone());
     let compress = MyCompress::new(perm.clone());
     let val_mmcs = ValMmcs::new(hash, compress);
     let challenge_mmcs = ChallengeMmcs::new(val_mmcs.clone());
     let dft = Dft::default();
-    let fri_config = create_test_fri_config(challenge_mmcs);
+    let fri_config = create_test_fri_config(challenge_mmcs, 1);
     let trace = generate_trace_rows::<Val>(0, 1, 1 << 3);
     let pcs = Pcs::new(dft, val_mmcs, fri_config);
-    let config = MyConfig::new(pcs);
-    let mut challenger = Challenger::new(perm);
+    let challenger = Challenger::new(perm);
+    let config = MyConfig::new(pcs, challenger);
     let pis = vec![
         BabyBear::ZERO,
         BabyBear::ONE,
         BabyBear::from_u32(123_123), // incorrect result
     ];
-    prove(&config, &FibonacciAir {}, &mut challenger, trace, &pis);
+    prove(&config, &FibonacciAir {}, trace, &pis);
 }

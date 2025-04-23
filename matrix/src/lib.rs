@@ -10,8 +10,7 @@ use core::ops::Deref;
 
 use itertools::{Itertools, izip};
 use p3_field::{
-    BasedVectorSpace, ExtensionField, Field, PackedFieldExtension, PackedValue,
-    PrimeCharacteristicRing, dot_product,
+    BasedVectorSpace, ExtensionField, Field, PackedValue, PrimeCharacteristicRing, dot_product,
 };
 use p3_maybe_rayon::prelude::*;
 use strided::{VerticallyStridedMatrixView, VerticallyStridedRowIndexMap};
@@ -23,16 +22,20 @@ pub mod bitrev;
 pub mod dense;
 pub mod extension;
 pub mod horizontally_truncated;
-pub mod mul;
 pub mod row_index_mapped;
-pub mod sparse;
 pub mod stack;
 pub mod strided;
 pub mod util;
 
+/// A simple struct representing the shape of a matrix.
+///
+/// The `Dimensions` type stores the number of columns (`width`) and rows (`height`)
+/// of a matrix. It is commonly used for querying and displaying matrix shapes.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Dimensions {
+    /// Number of columns in the matrix.
     pub width: usize,
+    /// Number of rows in the matrix.
     pub height: usize,
 }
 
@@ -48,10 +51,19 @@ impl Display for Dimensions {
     }
 }
 
+/// A generic trait for two-dimensional matrix-like data structures.
+///
+/// The `Matrix` trait provides a uniform interface for accessing rows, elements,
+/// and computing with matrices in both sequential and parallel contexts. It supports
+/// packing strategies for SIMD optimizations and interaction with extension fields.
 pub trait Matrix<T: Send + Sync>: Send + Sync {
+    /// Returns the number of columns in the matrix.
     fn width(&self) -> usize;
+
+    /// Returns the number of rows in the matrix.
     fn height(&self) -> usize;
 
+    /// Returns the dimensions (width, height) of the matrix.
     fn dimensions(&self) -> Dimensions {
         Dimensions {
             width: self.width(),
@@ -59,37 +71,51 @@ pub trait Matrix<T: Send + Sync>: Send + Sync {
         }
     }
 
+    /// Returns the element at the given row and column.
+    ///
+    /// # Panics
+    /// Panics if `r >= height()` or `c >= width()`.
     fn get(&self, r: usize, c: usize) -> T {
         self.row(r).nth(c).unwrap()
     }
 
+    /// Type of row iterator returned by this matrix.
     type Row<'a>: Iterator<Item = T> + Send + Sync
     where
         Self: 'a;
 
+    /// Returns an iterator over the elements of the `r`-th row.
+    ///
+    /// # Panics
+    /// Panics if `r >= height()`.
     fn row(&self, r: usize) -> Self::Row<'_>;
 
+    /// Returns an iterator over all rows in the matrix.
     fn rows(&self) -> impl Iterator<Item = Self::Row<'_>> {
         (0..self.height()).map(move |r| self.row(r))
     }
 
+    /// Returns a parallel iterator over all rows in the matrix.
     fn par_rows(&self) -> impl IndexedParallelIterator<Item = Self::Row<'_>> {
         (0..self.height()).into_par_iter().map(move |r| self.row(r))
     }
 
-    // Opaque return type implicitly captures &'_ self
+    /// Returns the elements of the `r`-th row as something which can be coerced to a slice.
     fn row_slice(&self, r: usize) -> impl Deref<Target = [T]> {
         self.row(r).collect_vec()
     }
 
+    /// Returns an iterator over the first row of the matrix.
     fn first_row(&self) -> Self::Row<'_> {
         self.row(0)
     }
 
+    /// Returns an iterator over the last row of the matrix.
     fn last_row(&self) -> Self::Row<'_> {
         self.row(self.height() - 1)
     }
 
+    /// Converts the matrix into a `RowMajorMatrix` by collecting all rows into a single vector.
     fn to_row_major_matrix(self) -> RowMajorMatrix<T>
     where
         Self: Sized,
@@ -101,6 +127,10 @@ pub trait Matrix<T: Send + Sync>: Send + Sync {
         )
     }
 
+    /// Get a packed iterator over the `r`-th row.
+    ///
+    /// If the row length is not divisible by the packing width, the final elements
+    /// are returned as a base iterator with length `<= P::WIDTH - 1`.
     fn horizontally_packed_row<'a, P>(
         &'a self,
         r: usize,
@@ -118,7 +148,9 @@ pub trait Matrix<T: Send + Sync>: Send + Sync {
         (packed, sfx)
     }
 
-    /// Zero padded.
+    /// Get a packed iterator over the `r`-th row.
+    ///
+    /// If the row length is not divisible by the packing width, the final entry will be zero-padded.
     fn padded_horizontally_packed_row<'a, P>(
         &'a self,
         r: usize,
@@ -129,10 +161,14 @@ pub trait Matrix<T: Send + Sync>: Send + Sync {
     {
         let mut row_iter = self.row(r);
         let num_elems = self.width().div_ceil(P::WIDTH);
-        // array::from_fn currently always calls in order, but it's not clear whether that's guaranteed.
+        // array::from_fn is guaranteed to always call in order.
         (0..num_elems).map(move |_| P::from_fn(|_| row_iter.next().unwrap_or_default()))
     }
 
+    /// Get a parallel iterator over all packed rows of the matrix.
+    ///
+    /// If the matrix width is not divisible by the packing width, the final elements
+    /// of each row are returned as a base iterator with length `<= P::WIDTH - 1`.
     fn par_horizontally_packed_rows<'a, P>(
         &'a self,
     ) -> impl IndexedParallelIterator<
@@ -150,6 +186,9 @@ pub trait Matrix<T: Send + Sync>: Send + Sync {
             .map(|r| self.horizontally_packed_row(r))
     }
 
+    /// Get a parallel iterator over all packed rows of the matrix.
+    ///
+    /// If the matrix width is not divisible by the packing width, the final entry of each row will be zero-padded.
     fn par_padded_horizontally_packed_rows<'a, P>(
         &'a self,
     ) -> impl IndexedParallelIterator<Item = impl Iterator<Item = P> + Send + Sync>
@@ -213,6 +252,9 @@ pub trait Matrix<T: Send + Sync>: Send + Sync {
             .collect_vec()
     }
 
+    /// Returns a view over a vertically strided submatrix.
+    ///
+    /// The view selects rows using `r = offset + i * stride` for each `i`.
     fn vertically_strided(self, stride: usize, offset: usize) -> VerticallyStridedMatrixView<Self>
     where
         Self: Sized,
@@ -262,19 +304,33 @@ pub trait Matrix<T: Send + Sync>: Send + Sync {
             .collect()
     }
 
-    /// Multiply this matrix by the vector of powers of `base`, which is an extension element.
-    fn dot_ext_powers<EF>(&self, base: EF) -> impl IndexedParallelIterator<Item = EF>
+    /// Compute the matrix vector product `M . vec`, aka take the dot product of each
+    /// row of `M` by `vec`. If the length of `vec` is longer than the width of `M`,
+    /// `vec` is truncated to the first `width()` elements.
+    ///
+    /// We make use of `PackedFieldExtension` to speed up computations. Thus `vec` is passed in as
+    /// a slice of `PackedFieldExtension` elements.
+    ///
+    /// # Panics
+    /// This function panics if the length of `vec` is less than `self.width().div_ceil(T::Packing::WIDTH)`.
+    fn rowwise_packed_dot_product<EF>(
+        &self,
+        vec: &[EF::ExtensionPacking],
+    ) -> impl IndexedParallelIterator<Item = EF>
     where
         T: Field,
         EF: ExtensionField<T>,
     {
-        let powers_packed = EF::ExtensionPacking::packed_ext_powers(base)
-            .take(self.width().next_multiple_of(T::Packing::WIDTH))
-            .collect_vec();
+        // The length of a `padded_horizontally_packed_row` is `self.width().div_ceil(T::Packing::WIDTH)`.
+        assert!(vec.len() >= self.width().div_ceil(T::Packing::WIDTH));
+
+        // TODO: This is a base - extension dot product and so it should
+        // be possible to speed this up using ideas in `packed_linear_combination`.
+        // TODO: Perhaps we should be packing rows vertically not horizontally.
         self.par_padded_horizontally_packed_rows::<T::Packing>()
             .map(move |row_packed| {
                 let packed_sum_of_packed: EF::ExtensionPacking =
-                    dot_product(powers_packed.iter().copied(), row_packed);
+                    dot_product(vec.iter().copied(), row_packed);
                 let sum_of_packed: EF = EF::from_basis_coefficients_fn(|i| {
                     packed_sum_of_packed.as_basis_coefficients_slice()[i]
                         .as_slice()
@@ -296,7 +352,8 @@ mod tests {
     use p3_baby_bear::BabyBear;
     use p3_field::PrimeCharacteristicRing;
     use p3_field::extension::BinomialExtensionField;
-    use rand::rng;
+    use rand::SeedableRng;
+    use rand::rngs::SmallRng;
 
     use super::*;
 
@@ -305,8 +362,9 @@ mod tests {
         type F = BabyBear;
         type EF = BinomialExtensionField<BabyBear, 4>;
 
-        let m = RowMajorMatrix::<F>::rand(&mut rng(), 1 << 8, 1 << 4);
-        let v = RowMajorMatrix::<EF>::rand(&mut rng(), 1 << 8, 1).values;
+        let mut rng = SmallRng::seed_from_u64(1);
+        let m = RowMajorMatrix::<F>::rand(&mut rng, 1 << 8, 1 << 4);
+        let v = RowMajorMatrix::<EF>::rand(&mut rng, 1 << 8, 1).values;
 
         let mut expected = vec![EF::ZERO; m.width()];
         for (row, &scale) in izip!(m.rows(), &v) {

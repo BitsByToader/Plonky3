@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use core::mem::MaybeUninit;
 use core::ops::Div;
 use core::{array, slice};
@@ -213,9 +214,11 @@ pub unsafe trait PackedFieldPow2: PackedField {
     /// We can also think about this as stacking the vectors, dividing them into 2x2 matrices, and
     /// transposing those matrices.
     ///
-    /// When `block_len = WIDTH`, this operation is a no-op. `block_len` must divide `WIDTH`. Since
-    /// `WIDTH` is specified to be a power of 2, `block_len` must also be a power of 2. It cannot be
-    /// 0 and it cannot exceed `WIDTH`.
+    /// When `block_len = WIDTH`, this operation is a no-op.
+    ///
+    /// # Panics
+    /// This may panic if `block_len` does not divide `WIDTH`. Since `WIDTH` is specified to be a power of 2,
+    /// `block_len` must also be a power of 2. It cannot be 0 and it cannot exceed `WIDTH`.
     fn interleave(&self, other: Self, block_len: usize) -> (Self, Self);
 }
 
@@ -237,9 +240,32 @@ pub trait PackedFieldExtension<
     /// `[[F; W]; D]` and then pack to get `[PF; D]`.
     fn from_ext_slice(ext_slice: &[ExtField]) -> Self;
 
-    /// Similar to packed_powers, construct an iterator which returns
+    /// Given a iterator of packed extension field elements, convert to an iterator of
+    /// extension field elements.
+    ///
+    /// This performs the inverse transformation to `from_ext_slice`.
+    #[inline]
+    fn to_ext_iter(iter: impl IntoIterator<Item = Self>) -> impl Iterator<Item = ExtField> {
+        iter.into_iter().flat_map(|x| {
+            let packed_coeffs = x.as_basis_coefficients_slice();
+            (0..BaseField::Packing::WIDTH)
+                .map(|i| ExtField::from_basis_coefficients_fn(|j| packed_coeffs[j].as_slice()[i]))
+                .collect::<Vec<_>>() // PackedFieldExtension's should reimplement this to avoid this allocation.
+        })
+    }
+
+    /// Similar to `packed_powers`, construct an iterator which returns
     /// powers of `base` packed into `PackedFieldExtension` elements.
     fn packed_ext_powers(base: ExtField) -> Powers<Self>;
+
+    /// Similar to `packed_ext_powers` but only returns `unpacked_len` powers of `base`.
+    ///
+    /// Note that the length of the returned iterator will be `unpacked_len / WIDTH` and
+    /// not `len` as the iterator is over packed extension field elements. If `unpacked_len`
+    /// is not divisible by `WIDTH`, `unpacked_len` will be rounded up to the next multiple of `WIDTH`.
+    fn packed_ext_powers_capped(base: ExtField, unpacked_len: usize) -> impl Iterator<Item = Self> {
+        Self::packed_ext_powers(base).take(unpacked_len.div_ceil(BaseField::Packing::WIDTH))
+    }
 }
 
 unsafe impl<T: Packable> PackedValue for T {

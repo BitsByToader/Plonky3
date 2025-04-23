@@ -10,11 +10,11 @@ use p3_matrix::dense::RowMajorMatrix;
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_symmetric::{PaddingFreeSponge, TruncatedPermutation};
 use rand::distr::{Distribution, StandardUniform};
+use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha20Rng;
 
 fn seeded_rng() -> impl Rng {
-    ChaCha20Rng::seed_from_u64(0)
+    SmallRng::seed_from_u64(0)
 }
 
 fn do_test_fri_pcs<Val, Challenge, Challenger, P>(
@@ -197,13 +197,13 @@ mod babybear_fri_pcs {
 }
 
 mod m31_fri_pcs {
-    use std::marker::PhantomData;
+    use core::marker::PhantomData;
 
     use p3_challenger::{HashChallenger, SerializingChallenger32};
     use p3_circle::CirclePcs;
     use p3_keccak::Keccak256Hash;
     use p3_mersenne_31::Mersenne31;
-    use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
+    use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher};
 
     use super::*;
 
@@ -211,7 +211,7 @@ mod m31_fri_pcs {
     type Challenge = BinomialExtensionField<Mersenne31, 3>;
 
     type ByteHash = Keccak256Hash;
-    type FieldHash = SerializingHasher32<ByteHash>;
+    type FieldHash = SerializingHasher<ByteHash>;
 
     type MyCompress = CompressionFunctionFromHasher<ByteHash, 2, 32>;
 
