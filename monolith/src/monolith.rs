@@ -179,9 +179,10 @@ where
             self.concrete(state);
             self.add_round_constants(state, &rc);
         }
-        self.bars(state);
-        Self::bricks(state);
-        self.concrete(state);
+        // Tudor ~~ Original Monolith Paper does not mention below extra round.
+        // self.bars(state);
+        // Self::bricks(state);
+        // self.concrete(state);
     }
 }
 

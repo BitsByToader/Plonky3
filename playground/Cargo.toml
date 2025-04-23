@@ -1,0 +1,9 @@
+[package]
+name = "playground"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+p3-mersenne-31.workspace = true
+p3-monolith.workspace = true
+rand.workspace = true
