@@ -148,8 +148,8 @@ fn main() {
     // check_monolith_hash();
 
     // Benchmark one milion Monolith hashes
-    // benchmark_monolith();
+    benchmark_monolith();
 
     // Check on simple input
-    check_one_input(0x36);
+    // check_one_input(0x36);
 }
