@@ -2,6 +2,12 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
+mod hw_monolith;
+
+use core::time;
+use std::thread::sleep;
+
+use hw_monolith::HWMonolith;
 use p3_mersenne_31::*;
 use p3_monolith::*;
 use rand::Rng;
@@ -134,6 +140,30 @@ fn check_one_input(smth: u32) {
     println!();
 }
 
+fn check_hw_acc() {
+    let mut hw_monolith = HWMonolith::new();
+
+    let mds = MonolithMdsMatrixMersenne31::<6>;
+    let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
+
+    loop {
+        let rand_input: u32 = (rand::random::<u32>() << 1) >> 1; // Remove MSB for consistency
+
+        let mut some_input: [u32; STATE_SIZE] = [0; STATE_SIZE];
+        some_input[0] = rand_input;
+        let mut state: [Mersenne31; STATE_SIZE] = Mersenne31::new_array(some_input);
+        monolith.permutation(&mut state);
+
+        let hw_out: Mersenne31 = Mersenne31::new_checked(hw_monolith.hash(rand_input)).unwrap(); // Not necessary, but variables need to match type
+
+        println!("{:x?} == {:x?}", state[0], hw_out);
+
+        assert_eq!(state[0], hw_out);
+
+        sleep(time::Duration::from_secs(1));
+    }
+}
+
 fn main() {
     // Check M31 multiplier, thus modular reduction.
     // check_mul();
@@ -148,8 +178,11 @@ fn main() {
     // check_monolith_hash();
 
     // Benchmark one milion Monolith hashes
-    benchmark_monolith();
+    // benchmark_monolith();
 
     // Check on simple input
     // check_one_input(0x36);
+
+    // Checks the hardware accelerator against reference implementation.
+    check_hw_acc();
 }

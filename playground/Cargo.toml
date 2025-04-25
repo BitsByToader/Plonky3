@@ -7,3 +7,4 @@ edition = "2021"
 p3-mersenne-31.workspace = true
 p3-monolith.workspace = true
 rand.workspace = true
+memmap2 = "0.9.5"
