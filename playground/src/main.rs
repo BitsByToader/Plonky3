@@ -4,6 +4,9 @@
 
 mod hw_monolith;
 
+use std::io::{BufRead, BufReader};
+use std::fs::File;
+
 use core::time;
 use std::thread::sleep;
 
@@ -128,16 +131,17 @@ fn check_one_input(smth: u32) {
     let mut some_input: [u32; STATE_SIZE] = [0; STATE_SIZE];
     some_input[0] = smth;
     let mut state: [Mersenne31; STATE_SIZE] = Mersenne31::new_array(some_input);
-    println!("Using some vec: {:x?}", state);
-    println!();
+    // println!("Using some vec: {:x?}", state);
+    // println!();
  
     let mds = MonolithMdsMatrixMersenne31::<6>;
     let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
  
     monolith.permutation(&mut state);
 
-    println!("Monolith hash of vec: {:x?}", state);
-    println!();
+    // println!("Monolith hash of vec: {:x?}", state);
+    println!("Monolith hash(0x{:x?}) = 0x{:x?}", smth, state[0]);
+    // println!();
 }
 
 fn check_hw_acc() {
@@ -164,6 +168,57 @@ fn check_hw_acc() {
     }
 }
 
+fn benchmark_hw_monolith() {
+    use std::time::Instant;
+    let mut hw_monolith = HWMonolith::new();
+
+    loop {
+        let mut inputs: Vec<u32> = vec![0; RUNS];
+        for i in 0..RUNS {
+            let rand_input: u32 = (rand::random::<u32>() << 1) >> 1; // Remove MSB for consistency purposes.
+            inputs[i] = rand_input;
+        }
+
+        let now = Instant::now();
+        for i in 0..RUNS {
+            let _ = hw_monolith.hash(inputs[i]);
+        }
+        let elapsed = now.elapsed();
+        println!("Elapsed: {:.2?}", elapsed);
+    }
+}
+
+fn check_pairs_from_file() {
+    let mds = MonolithMdsMatrixMersenne31::<6>;
+    let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
+
+    let reader = BufReader::new(File::open("/Users/tudor/Desktop/test_out.txt").expect("Cannot open file.txt"));
+
+    for line in reader.lines() {
+        let pairs = line.unwrap();
+        let mut words = pairs.split_whitespace();
+        
+        let in_str = words.next();
+        let out_str = words.next();
+
+        let input: u32 = in_str.unwrap().parse().unwrap();
+        let output: u32 = out_str.unwrap().parse().unwrap();
+
+        let m31_output = Mersenne31::new_checked(output).unwrap();
+
+        let mut monolith_input: [u32; STATE_SIZE] = [0; STATE_SIZE];
+        monolith_input[0] = input;
+        let mut state: [Mersenne31; STATE_SIZE] = Mersenne31::new_array(monolith_input);
+        monolith.permutation(&mut state);
+
+        if state[0] != m31_output {
+            println!("For input {:x?}: {:x?} != {:x?}", input, state[0], m31_output);
+        }
+        
+        // assert_eq!(state[0], m31_output);
+    }
+}
+
 fn main() {
     // Check M31 multiplier, thus modular reduction.
     // check_mul();
@@ -181,8 +236,13 @@ fn main() {
     // benchmark_monolith();
 
     // Check on simple input
-    // check_one_input(0x36);
+    // check_one_input(0x267260e1);
 
     // Checks the hardware accelerator against reference implementation.
-    check_hw_acc();
+    // check_hw_acc();
+    
+    // Benchmakrs one milion Monolith hashes executed using accelerator.
+    // benchmark_hw_monolith();
+
+    check_pairs_from_file();
 }

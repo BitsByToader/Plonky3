@@ -61,7 +61,7 @@ impl HWMonolith {
 
     pub fn hash(&mut self, input: u32) -> u32 {
         loop {
-            self.mmap.write_u32(0, (input<<1) | 1);
+            self.mmap.write_u32(0, (input << 1) | 1);
             let out = self.mmap.read_u32(8).unwrap();
 
             if (out&1) == 1 {
