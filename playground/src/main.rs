@@ -194,10 +194,12 @@ fn check_pairs_from_file() {
 
     let reader = BufReader::new(File::open("/Users/tudor/Desktop/test_out.txt").expect("Cannot open file.txt"));
 
+    let mut misses: u32 = 0;
     for line in reader.lines() {
         let pairs = line.unwrap();
         let mut words = pairs.split_whitespace();
         
+        let idx = words.next();
         let in_str = words.next();
         let out_str = words.next();
 
@@ -212,11 +214,12 @@ fn check_pairs_from_file() {
         monolith.permutation(&mut state);
 
         if state[0] != m31_output {
-            println!("For input {:x?}: {:x?} != {:x?}", input, state[0], m31_output);
+            println!("{:}: For input {:x?}: (correct) {:x?} != {:x?} (computed)", idx.unwrap(), input, state[0], m31_output);
+            misses += 1;
         }
-        
-        // assert_eq!(state[0], m31_output);
     }
+
+    println!("Misses: {misses}.");
 }
 
 fn main() {
