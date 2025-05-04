@@ -196,6 +196,8 @@ unsafe fn benchmark_hw_monolith() {
         let elapsed = now.elapsed();
         println!("Elapsed: {:.2?}", elapsed);
     }
+
+    unmap_monolith(mapped_monolith_ptr);
 }
 
 fn check_pairs_from_file() {
