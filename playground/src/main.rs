@@ -149,11 +149,12 @@ fn check_one_input(smth: u32) {
 unsafe fn check_hw_acc() {
     // let mut hw_monolith = HWMonolith::new();
     let mut mapped_monolith = map_monolith();
+    let mapped_monolith_ptr = &raw mut mapped_monolith;
 
     let mds = MonolithMdsMatrixMersenne31::<6>;
     let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
 
-    loop {
+    for _ in 0..10 {
         let rand_input: u32 = (rand::random::<u32>() << 1) >> 1; // Remove MSB for consistency
 
         let mut some_input: [u32; STATE_SIZE] = [0; STATE_SIZE];
@@ -162,7 +163,7 @@ unsafe fn check_hw_acc() {
         monolith.permutation(&mut state);
 
         // let hw_out: Mersenne31 = Mersenne31::new_checked(hw_monolith.hash(rand_input)).unwrap(); // Not necessary, but variables need to match type
-        let hw_out: Mersenne31 = Mersenne31::new_checked(monolith_hash(mapped_monolith, rand_input)).unwrap(); // Not necessary, but variables need to match type
+        let hw_out: Mersenne31 = Mersenne31::new_checked(monolith_hash(mapped_monolith_ptr, rand_input)).unwrap(); // Not necessary, but variables need to match type
 
         println!("{:x?} == {:x?}", state[0], hw_out);
 
@@ -171,14 +172,17 @@ unsafe fn check_hw_acc() {
         sleep(time::Duration::from_secs(1));
     }
 
-    unmap_monolith(mapped_monolith);
+    unmap_monolith(mapped_monolith_ptr);
 }
 
-fn benchmark_hw_monolith() {
+unsafe fn benchmark_hw_monolith() {
     use std::time::Instant;
-    let mut hw_monolith = HWMonolith::new();
+    
+    // let mut hw_monolith = HWMonolith::new();
+    let mut mapped_monolith = map_monolith();
+    let mapped_monolith_ptr = &raw mut mapped_monolith;
 
-    loop {
+    for _ in 0..10 {
         let mut inputs: Vec<u32> = vec![0; RUNS];
         for i in 0..RUNS {
             let rand_input: u32 = (rand::random::<u32>() << 1) >> 1; // Remove MSB for consistency purposes.
@@ -187,7 +191,7 @@ fn benchmark_hw_monolith() {
 
         let now = Instant::now();
         for i in 0..RUNS {
-            let _ = hw_monolith.hash(inputs[i]);
+            let _ = monolith_hash(mapped_monolith_ptr, inputs[i]);
         }
         let elapsed = now.elapsed();
         println!("Elapsed: {:.2?}", elapsed);
