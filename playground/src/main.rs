@@ -2,8 +2,8 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
-mod hw_monolith;
 mod monolith_perm_bindings;
+use monolith_perm_bindings::*;
 
 use std::io::{BufRead, BufReader};
 use std::fs::File;
@@ -11,8 +11,6 @@ use std::fs::File;
 use core::time;
 use std::thread::sleep;
 
-use monolith_perm_bindings::*;
-use hw_monolith::HWMonolith;
 use p3_mersenne_31::*;
 use p3_monolith::*;
 use rand::Rng;
@@ -146,39 +144,9 @@ fn check_one_input(smth: u32) {
     // println!();
 }
 
-unsafe fn check_hw_acc() {
-    // let mut hw_monolith = HWMonolith::new();
-    let mut mapped_monolith = map_monolith();
-    let mapped_monolith_ptr = &raw mut mapped_monolith;
-
-    let mds = MonolithMdsMatrixMersenne31::<6>;
-    let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
-
-    for _ in 0..10 {
-        let rand_input: u32 = (rand::random::<u32>() << 1) >> 1; // Remove MSB for consistency
-
-        let mut some_input: [u32; STATE_SIZE] = [0; STATE_SIZE];
-        some_input[0] = rand_input;
-        let mut state: [Mersenne31; STATE_SIZE] = Mersenne31::new_array(some_input);
-        monolith.permutation(&mut state);
-
-        // let hw_out: Mersenne31 = Mersenne31::new_checked(hw_monolith.hash(rand_input)).unwrap(); // Not necessary, but variables need to match type
-        let hw_out: Mersenne31 = Mersenne31::new_checked(monolith_hash(mapped_monolith_ptr, rand_input)).unwrap(); // Not necessary, but variables need to match type
-
-        println!("{:x?} == {:x?}", state[0], hw_out);
-
-        assert_eq!(state[0], hw_out);
-
-        sleep(time::Duration::from_secs(1));
-    }
-
-    unmap_monolith(mapped_monolith_ptr);
-}
-
-unsafe fn benchmark_hw_monolith() {
+unsafe fn benchmark_and_check_hw_monolith() {
     use std::time::Instant;
     
-    // let mut hw_monolith = HWMonolith::new();
     let mut mapped_monolith = map_monolith();
     let mapped_monolith_ptr = &raw mut mapped_monolith;
 
@@ -188,7 +156,7 @@ unsafe fn benchmark_hw_monolith() {
     let mut inputs: Vec<u32> = vec![0; RUNS];
     let mut outputs: Vec<u32> = vec![0; RUNS];
     for i in 0..RUNS {
-        let rand_input: u32 = (rand::random::<u32>() << 1) >> 1; // Remove MSB for consistency purposes.
+        let rand_input: u32 = (rand::random::<u32>() << 1) >> 1; // Remove MSB to pass check when unwrapping Mersenne31 below.
         inputs[i] = rand_input;
     }
 
@@ -196,8 +164,8 @@ unsafe fn benchmark_hw_monolith() {
     for i in 0..RUNS {
         outputs[i] = monolith_hash(mapped_monolith_ptr, inputs[i]);
     }
-    
     let elapsed = now.elapsed();
+    
     println!("Elapsed: {:.2?}", elapsed);
     println!("Throughput: {:.2} hash/sec", (RUNS as f64)/elapsed.as_secs_f64());
     println!("Checking results...");
@@ -211,8 +179,6 @@ unsafe fn benchmark_hw_monolith() {
 
         let hw_out = Mersenne31::new_checked(outputs[i]).unwrap();
 
-        // println!("{:x?} == {:x?}", state[0], hw_out);
-        // assert_eq!(state[0], hw_out);
         if state[0] != hw_out {
             println!("For input {:x?}: (correct) {:x?} != {:x?} (computed)", inputs[i], state[0], outputs[i]);
             misses += 1;
@@ -221,40 +187,6 @@ unsafe fn benchmark_hw_monolith() {
     println!("Misses: {misses}.");
 
     unmap_monolith(mapped_monolith_ptr);
-}
-
-fn check_pairs_from_file() {
-    let mds = MonolithMdsMatrixMersenne31::<6>;
-    let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
-
-    let reader = BufReader::new(File::open("/Users/tudor/Desktop/test_out.txt").expect("Cannot open file.txt"));
-
-    let mut misses: u32 = 0;
-    for line in reader.lines() {
-        let pairs = line.unwrap();
-        let mut words = pairs.split_whitespace();
-        
-        let idx = words.next();
-        let in_str = words.next();
-        let out_str = words.next();
-
-        let input: u32 = in_str.unwrap().parse().unwrap();
-        let output: u32 = out_str.unwrap().parse().unwrap();
-
-        let m31_output = Mersenne31::new_checked(output).unwrap();
-
-        let mut monolith_input: [u32; STATE_SIZE] = [0; STATE_SIZE];
-        monolith_input[0] = input;
-        let mut state: [Mersenne31; STATE_SIZE] = Mersenne31::new_array(monolith_input);
-        monolith.permutation(&mut state);
-
-        if state[0] != m31_output {
-            println!("{:}: For input {:x?}: (correct) {:x?} != {:x?} (computed)", idx.unwrap(), input, state[0], m31_output);
-            misses += 1;
-        }
-    }
-
-    println!("Misses: {misses}.");
 }
 
 fn main() {
@@ -275,12 +207,7 @@ fn main() {
 
     // Check on simple input
     // check_one_input(0x267260e1);
-
-    // Checks the hardware accelerator against reference implementation.
-    // check_hw_acc();
     
-    // Benchmakrs one milion Monolith hashes executed using accelerator.
-    unsafe { benchmark_hw_monolith() };
-
-    // check_pairs_from_file();
+    // Benchmakrs one milion Monolith hashes executed using accelerator and check its outputs afterwards.
+    unsafe { benchmark_and_check_hw_monolith() };
 }
