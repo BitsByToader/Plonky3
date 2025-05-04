@@ -185,42 +185,40 @@ unsafe fn benchmark_hw_monolith() {
     let mds = MonolithMdsMatrixMersenne31::<6>;
     let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
 
-    for _ in 0..10 {
-        let mut inputs: Vec<u32> = vec![0; RUNS];
-        let mut outputs: Vec<u32> = vec![0; RUNS];
-        for i in 0..RUNS {
-            let rand_input: u32 = (rand::random::<u32>() << 1) >> 1; // Remove MSB for consistency purposes.
-            inputs[i] = rand_input;
-        }
+    let mut inputs: Vec<u32> = vec![0; RUNS];
+    let mut outputs: Vec<u32> = vec![0; RUNS];
+    for i in 0..RUNS {
+        let rand_input: u32 = (rand::random::<u32>() << 1) >> 1; // Remove MSB for consistency purposes.
+        inputs[i] = rand_input;
+    }
 
-        let now = Instant::now();
-        for i in 0..RUNS {
-            outputs[i] = monolith_hash(mapped_monolith_ptr, inputs[i]);
-        }
-        
-        let elapsed = now.elapsed();
-        println!("Elapsed: {:.2?}", elapsed);
-        println!("Throughput: {:.2} hash/sec", (RUNS as f64)/elapsed.as_secs_f64());
-        println!("Checking results...");
+    let now = Instant::now();
+    for i in 0..RUNS {
+        outputs[i] = monolith_hash(mapped_monolith_ptr, inputs[i]);
+    }
+    
+    let elapsed = now.elapsed();
+    println!("Elapsed: {:.2?}", elapsed);
+    println!("Throughput: {:.2} hash/sec", (RUNS as f64)/elapsed.as_secs_f64());
+    println!("Checking results...");
 
-        let mut misses = 0;
-        for i in 0..RUNS {
-            let mut some_input: [u32; STATE_SIZE] = [0; STATE_SIZE];
-            some_input[0] = inputs[i];
-            let mut state: [Mersenne31; STATE_SIZE] = Mersenne31::new_array(some_input);
-            monolith.permutation(&mut state);
+    let mut misses = 0;
+    for i in 0..RUNS {
+        let mut some_input: [u32; STATE_SIZE] = [0; STATE_SIZE];
+        some_input[0] = inputs[i];
+        let mut state: [Mersenne31; STATE_SIZE] = Mersenne31::new_array(some_input);
+        monolith.permutation(&mut state);
 
-            let hw_out = Mersenne31::new_checked(outputs[i]).unwrap();
+        let hw_out = Mersenne31::new_checked(outputs[i]).unwrap();
 
-            // println!("{:x?} == {:x?}", state[0], hw_out);
-            // assert_eq!(state[0], hw_out);
-            if state[0] != hw_out {
-                println!("For input {:x?}: (correct) {:x?} != {:x?} (computed)", inputs[i], state[0], outputs[i]);
-                misses += 1;
-            }
-            println!("Misses: {misses}.");
+        // println!("{:x?} == {:x?}", state[0], hw_out);
+        // assert_eq!(state[0], hw_out);
+        if state[0] != hw_out {
+            println!("For input {:x?}: (correct) {:x?} != {:x?} (computed)", inputs[i], state[0], outputs[i]);
+            misses += 1;
         }
     }
+    println!("Misses: {misses}.");
 
     unmap_monolith(mapped_monolith_ptr);
 }
