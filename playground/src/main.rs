@@ -3,6 +3,7 @@
 #![allow(unused_imports)]
 
 mod hw_monolith;
+mod monolith_perm_bindings;
 
 use std::io::{BufRead, BufReader};
 use std::fs::File;
@@ -10,6 +11,7 @@ use std::fs::File;
 use core::time;
 use std::thread::sleep;
 
+use monolith_perm_bindings::*;
 use hw_monolith::HWMonolith;
 use p3_mersenne_31::*;
 use p3_monolith::*;
@@ -144,8 +146,9 @@ fn check_one_input(smth: u32) {
     // println!();
 }
 
-fn check_hw_acc() {
-    let mut hw_monolith = HWMonolith::new();
+unsafe fn check_hw_acc() {
+    // let mut hw_monolith = HWMonolith::new();
+    let mut mapped_monolith = map_monolith();
 
     let mds = MonolithMdsMatrixMersenne31::<6>;
     let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
@@ -158,7 +161,8 @@ fn check_hw_acc() {
         let mut state: [Mersenne31; STATE_SIZE] = Mersenne31::new_array(some_input);
         monolith.permutation(&mut state);
 
-        let hw_out: Mersenne31 = Mersenne31::new_checked(hw_monolith.hash(rand_input)).unwrap(); // Not necessary, but variables need to match type
+        // let hw_out: Mersenne31 = Mersenne31::new_checked(hw_monolith.hash(rand_input)).unwrap(); // Not necessary, but variables need to match type
+        let hw_out: Mersenne31 = Mersenne31::new_checked(monolith_hash(mapped_monolith, rand_input)).unwrap(); // Not necessary, but variables need to match type
 
         println!("{:x?} == {:x?}", state[0], hw_out);
 
@@ -166,6 +170,8 @@ fn check_hw_acc() {
 
         sleep(time::Duration::from_secs(1));
     }
+
+    unmap_monolith(mapped_monolith);
 }
 
 fn benchmark_hw_monolith() {
@@ -247,5 +253,5 @@ fn main() {
     // Benchmakrs one milion Monolith hashes executed using accelerator.
     // benchmark_hw_monolith();
 
-    check_pairs_from_file();
+    // check_pairs_from_file();
 }
