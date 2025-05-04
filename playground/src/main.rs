@@ -200,7 +200,7 @@ unsafe fn benchmark_hw_monolith() {
         
         let elapsed = now.elapsed();
         println!("Elapsed: {:.2?}", elapsed);
-        println!("Throughput: {:.2} hash/sec", RUNS/elapsed.as_secs_f64());
+        println!("Throughput: {:.2} hash/sec", (RUNS as f64)/elapsed.as_secs_f64());
         println!("Checking results...");
 
         let mut misses = 0;
@@ -215,7 +215,7 @@ unsafe fn benchmark_hw_monolith() {
             // println!("{:x?} == {:x?}", state[0], hw_out);
             // assert_eq!(state[0], hw_out);
             if state[0] != hw_out {
-                println!("{:}: For input {:x?}: (correct) {:x?} != {:x?} (computed)", idx.unwrap(), input, state[0], m31_output);
+                println!("For input {:x?}: (correct) {:x?} != {:x?} (computed)", inputs[i], state[0], outputs[i]);
                 misses += 1;
             }
             println!("Misses: {misses}.");
