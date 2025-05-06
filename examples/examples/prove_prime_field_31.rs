@@ -13,6 +13,7 @@ use p3_field::extension::BinomialExtensionField;
 use p3_keccak_air::KeccakAir;
 use p3_koala_bear::{GenericPoseidon2LinearLayersKoalaBear, KoalaBear, Poseidon2KoalaBear};
 use p3_mersenne_31::{GenericPoseidon2LinearLayersMersenne31, Mersenne31, Poseidon2Mersenne31};
+use p3_monolith::{MonolithMdsMatrixMersenne31, MonolithMersenne31};
 use p3_monty_31::dft::RecursiveDft;
 use p3_poseidon2_air::{RoundConstants, VectorizedPoseidon2Air};
 use rand::SeedableRng;
@@ -142,6 +143,7 @@ fn main() {
                     );
                     report_result(result);
                 }
+                MerkleHashOptions::Monolith31 => panic!("Unuspported options: Monolith31 only supports Mersenn31.")
             };
         }
         FieldOptions::BabyBear => {
@@ -195,6 +197,7 @@ fn main() {
                     );
                     report_result(result);
                 }
+                MerkleHashOptions::Monolith31 => panic!("Unsupported option: Monolith31 only supports Mersenn31.")
             };
         }
         FieldOptions::Mersenne31 => {
@@ -240,6 +243,18 @@ fn main() {
                 MerkleHashOptions::Poseidon2 => {
                     let perm16 = Poseidon2Mersenne31::<16>::new_from_rng_128(&mut rng);
                     let perm24 = Poseidon2Mersenne31::<24>::new_from_rng_128(&mut rng);
+
+                    let result = prove_m31_poseidon2::<_, EF, _, _, _>(
+                        proof_goal, num_hashes, perm16, perm24,
+                    );
+                    report_result(result);
+                }
+                MerkleHashOptions::Monolith31 => {
+                    let mds = MonolithMdsMatrixMersenne31::<6>;
+                    let perm16 = MonolithMersenne31::<16, 6>::new(mds);
+                    let mds = MonolithMdsMatrixMersenne31::<6>;
+                    let perm24 = MonolithMersenne31::<24, 6>::new(mds);
+
                     let result = prove_m31_poseidon2::<_, EF, _, _, _>(
                         proof_goal, num_hashes, perm16, perm24,
                     );

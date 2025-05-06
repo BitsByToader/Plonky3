@@ -39,6 +39,8 @@ pub(crate) type KeccakCircleStarkConfig<F, EF> = StarkConfig<
     SerializingChallenger32<F, HashChallenger<u8, Keccak256Hash, 32>>,
 >;
 
+// Types related to using Monolith (configured as the HW impl for consistency) in the Merkle tree.
+
 // Types related to using Poseidon2 in the Merkle tree.
 pub(crate) type Poseidon2Sponge<Perm24> = PaddingFreeSponge<Perm24, 24, 16, 8>;
 pub(crate) type Poseidon2Compression<Perm16> = TruncatedPermutation<Perm16, 2, 8, 16>;

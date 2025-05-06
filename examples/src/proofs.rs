@@ -1,6 +1,6 @@
 use core::fmt::Debug;
 
-use p3_challenger::{DuplexChallenger, SerializingChallenger32};
+use p3_challenger::{DuplexChallenger,SerializingChallenger32};
 use p3_circle::CirclePcs;
 use p3_commit::ExtensionMmcs;
 use p3_dft::TwoAdicSubgroupDft;
@@ -9,16 +9,14 @@ use p3_field::{ExtensionField, Field, PrimeField32, PrimeField64, TwoAdicField};
 use p3_fri::{TwoAdicFriPcs, create_benchmark_fri_config};
 use p3_keccak::{Keccak256Hash, KeccakF};
 use p3_mersenne_31::Mersenne31;
-use p3_symmetric::{CryptographicPermutation, PaddingFreeSponge, SerializingHasher};
+use p3_symmetric::*;
 use p3_uni_stark::{Proof, StarkGenericConfig, prove, verify};
 use rand::distr::StandardUniform;
 use rand::prelude::Distribution;
 
 use crate::airs::ExampleHashAir;
 use crate::types::{
-    KeccakCircleStarkConfig, KeccakCompressionFunction, KeccakMerkleMmcs, KeccakStarkConfig,
-    Poseidon2CircleStarkConfig, Poseidon2Compression, Poseidon2MerkleMmcs, Poseidon2Sponge,
-    Poseidon2StarkConfig,
+    KeccakCircleStarkConfig, KeccakCompressionFunction, KeccakMerkleMmcs, KeccakStarkConfig, Poseidon2CircleStarkConfig, Poseidon2Compression, Poseidon2MerkleMmcs, Poseidon2Sponge, Poseidon2StarkConfig
 };
 
 /// Produce a MerkleTreeMmcs which uses the KeccakF permutation.
@@ -31,6 +29,8 @@ const fn get_keccak_mmcs<F: Field>() -> KeccakMerkleMmcs<F> {
 
     KeccakMerkleMmcs::new(field_hash, compress)
 }
+
+/// Produce a MerkleTreeMmcs which uses the Monolith permutation.
 
 /// Produce a MerkleTreeMmcs from a pair of cryptographic field permutations.
 ///

@@ -49,7 +49,7 @@ fn check_mvm() {
     println!("Generated random vec: {:x?}", vec);
     
     let mds = MonolithMdsMatrixMersenne31::<6>;
-    let monolith: MonolithMersenne31<_, 16, 5> = MonolithMersenne31::new(mds);
+    let monolith: MonolithMersenne31<16, 6> = MonolithMersenne31::new(mds);
     monolith.concrete(&mut vec);
     
     println!("Vec after mul: {:x?}", vec);
@@ -61,12 +61,12 @@ fn check_monolith_round() {
     println!("Using some vec: {:x?}", state);
     println!();
 
-    let mds = MonolithMdsMatrixMersenne31::<5>;
-    let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
+    let mds = MonolithMdsMatrixMersenne31::<6>;
+    let monolith: MonolithMersenne31<16, 6> = MonolithMersenne31::new(mds);
     
     monolith.bars(&mut state);
     println!("Vec after bars: {:x?}", state); println!();
-    p3_monolith::MonolithMersenne31::<p3_monolith::MonolithMdsMatrixMersenne31<5>, 16, 5>::bricks(&mut state);
+    p3_monolith::MonolithMersenne31::<16, 5>::bricks(&mut state);
     println!("Vec after bricks: {:x?}", state); println!();
     monolith.concrete(&mut state);
 
@@ -80,14 +80,14 @@ fn check_monolith_hash() {
     println!();
 
     let mds = MonolithMdsMatrixMersenne31::<6>;
-    let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
+    let monolith: MonolithMersenne31<16, 6> = MonolithMersenne31::new(mds);
 
     monolith.concrete(&mut state);
     println!("After pre round: {:x?}", state);
     println!();
     for rc in monolith.round_constants {
         monolith.bars(&mut state);
-        MonolithMersenne31::<p3_monolith::MonolithMdsMatrixMersenne31<6>, 16, 6>::bricks(&mut state);
+        MonolithMersenne31::<16, 6>::bricks(&mut state);
         monolith.concrete(&mut state);
         println!("After concrete: {:x?}", state);
         monolith.add_round_constants(&mut state, &rc);
@@ -107,7 +107,7 @@ fn check_monolith_hash() {
 
 fn benchmark_monolith() {
     let mds = MonolithMdsMatrixMersenne31::<6>;
-    let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
+    let monolith: MonolithMersenne31<16, 6> = MonolithMersenne31::new(mds);
 
     use std::time::Instant;
     
@@ -135,7 +135,7 @@ fn check_one_input(smth: u32) {
     // println!();
  
     let mds = MonolithMdsMatrixMersenne31::<6>;
-    let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
+    let monolith: MonolithMersenne31<16, 6> = MonolithMersenne31::new(mds);
  
     monolith.permutation(&mut state);
 
@@ -151,7 +151,7 @@ unsafe fn benchmark_and_check_hw_monolith() {
     let mapped_monolith_ptr = &raw mut mapped_monolith;
 
     let mds = MonolithMdsMatrixMersenne31::<6>;
-    let monolith: MonolithMersenne31<_, 16, 6> = MonolithMersenne31::new(mds);
+    let monolith: MonolithMersenne31<16, 6> = MonolithMersenne31::new(mds);
 
     let mut inputs: Vec<u32> = vec![0; RUNS];
     let mut outputs: Vec<u32> = vec![0; RUNS];

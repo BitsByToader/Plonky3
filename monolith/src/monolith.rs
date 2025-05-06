@@ -7,11 +7,14 @@ use alloc::borrow::ToOwned;
 use alloc::vec::Vec;
 
 use p3_field::integers::QuotientMap;
-use p3_field::{PrimeCharacteristicRing, PrimeField32};
-use p3_mds::MdsPermutation;
-use p3_mersenne_31::Mersenne31;
+use p3_field::{PackedValue, PrimeCharacteristicRing, PrimeField32};
+// use p3_mds::MdsPermutation;
+use p3_mersenne_31::{Mersenne31, PackedMersenne31Neon};
+use p3_symmetric::{CryptographicHasher, CryptographicPermutation, Permutation};
 use sha3::digest::{ExtendableOutput, Update};
 use sha3::{Shake128, Shake128Reader};
+
+use crate::MonolithMdsMatrixMersenne31;
 
 use crate::util::get_random_u32;
 
@@ -19,24 +22,21 @@ use crate::util::get_random_u32;
 // NUM_FULL_ROUNDS is the number of rounds - 1
 // (used to avoid const generics because we need an array of length NUM_FULL_ROUNDS)
 #[derive(Debug)]
-pub struct MonolithMersenne31<Mds, const WIDTH: usize, const NUM_FULL_ROUNDS: usize>
-where
-    Mds: MdsPermutation<Mersenne31, WIDTH>,
+#[derive(Clone)]
+pub struct MonolithMersenne31<const WIDTH: usize, const NUM_FULL_ROUNDS: usize>
 {
     pub round_constants: [[Mersenne31; WIDTH]; NUM_FULL_ROUNDS],
     pub lookup1: Vec<u16>,
     pub lookup2: Vec<u16>,
-    pub mds: Mds,
+    pub mds: MonolithMdsMatrixMersenne31<NUM_FULL_ROUNDS>,
 }
 
-impl<Mds, const WIDTH: usize, const NUM_FULL_ROUNDS: usize>
-    MonolithMersenne31<Mds, WIDTH, NUM_FULL_ROUNDS>
-where
-    Mds: MdsPermutation<Mersenne31, WIDTH>,
+impl<const WIDTH: usize, const NUM_FULL_ROUNDS: usize>
+    MonolithMersenne31<WIDTH, NUM_FULL_ROUNDS>
 {
     pub const NUM_BARS: usize = 8;
 
-    pub fn new(mds: Mds) -> Self {
+    pub fn new(mds: MonolithMdsMatrixMersenne31<NUM_FULL_ROUNDS>) -> Self {
         assert!(WIDTH >= 8);
         assert!(WIDTH <= 24);
         assert_eq!(WIDTH % 4, 0);
@@ -186,6 +186,31 @@ where
     }
 }
 
+impl<const WIDTH: usize, const NUM_FULL_ROUNDS: usize> Permutation<[Mersenne31; WIDTH]> for MonolithMersenne31<WIDTH, NUM_FULL_ROUNDS> {
+    fn permute_mut(&self, input: &mut [Mersenne31; WIDTH]) {
+        self.permutation(input);
+    }
+}
+impl<const WIDTH: usize, const NUM_FULL_ROUNDS: usize> CryptographicPermutation<[Mersenne31; WIDTH]> for MonolithMersenne31<WIDTH, NUM_FULL_ROUNDS> {
+}
+
+impl<const WIDTH: usize, const NUM_FULL_ROUNDS: usize> Permutation<[PackedMersenne31Neon; WIDTH]> for MonolithMersenne31<WIDTH, NUM_FULL_ROUNDS> {
+    fn permute_mut(&self, input: &mut [PackedMersenne31Neon; WIDTH]) {
+        let mut unpacked: [Mersenne31; WIDTH] = [Mersenne31::new_checked(0).unwrap(); WIDTH];
+        for i in 0..WIDTH {
+            unpacked[i] = input[i].0[0];
+        }
+
+        self.permutation(&mut unpacked);
+        
+        for i in 0..WIDTH {
+            input[i] = PackedMersenne31Neon::from(unpacked[i]);
+        }
+    }
+}
+impl<const WIDTH: usize, const NUM_FULL_ROUNDS: usize> CryptographicPermutation<[PackedMersenne31Neon; WIDTH]> for MonolithMersenne31<WIDTH, NUM_FULL_ROUNDS> {
+}
+
 #[cfg(test)]
 mod tests {
     use core::array;
@@ -199,7 +224,7 @@ mod tests {
     #[test]
     fn test_monolith_31() {
         let mds = MonolithMdsMatrixMersenne31::<6>;
-        let monolith: MonolithMersenne31<_, 16, 5> = MonolithMersenne31::new(mds);
+        let monolith: MonolithMersenne31<16, 6> = MonolithMersenne31::new(mds);
 
         let mut input = array::from_fn(Mersenne31::from_usize);
 

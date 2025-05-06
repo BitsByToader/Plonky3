@@ -19,6 +19,7 @@ p3-matrix.workspace = true
 p3-merkle-tree.workspace = true
 p3-mersenne-31.workspace = true
 p3-monty-31.workspace = true
+p3-monolith.workspace = true
 p3-poseidon2.workspace = true
 p3-poseidon2-air.workspace = true
 p3-symmetric.workspace = true
