@@ -4,13 +4,15 @@
 //! `KeccakCircleStarkConfig`, `Poseidon2StarkConfig`, `Poseidon2CircleStarkConfig`.
 //! These are needed to define our proof functions.
 
+use hw_monolith::HWMonolith;
 use p3_challenger::{DuplexChallenger, HashChallenger, SerializingChallenger32};
 use p3_circle::CirclePcs;
 use p3_commit::ExtensionMmcs;
-use p3_field::Field;
+use p3_field::{extension::BinomialExtensionField, ExtensionField};
 use p3_fri::TwoAdicFriPcs;
 use p3_keccak::{Keccak256Hash, KeccakF};
 use p3_merkle_tree::MerkleTreeMmcs;
+use p3_mersenne_31::Mersenne31;
 use p3_symmetric::{
     CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher, TruncatedPermutation,
 };
@@ -39,14 +41,42 @@ pub(crate) type KeccakCircleStarkConfig<F, EF> = StarkConfig<
     SerializingChallenger32<F, HashChallenger<u8, Keccak256Hash, 32>>,
 >;
 
-// Types related to using Monolith (configured as the HW impl for consistency) in the Merkle tree.
+// Types related to using HW Monolith in the Merkle tree.
+pub(crate) type HWMonolithHash = PaddingFreeSponge<HWMonolith, 2, 1, 1>;
+pub(crate) type HWMonolithCompression = TruncatedPermutation<HWMonolith, 2, 1, 2>;
+pub(crate) type HWMonolithMerkleMmcs = MerkleTreeMmcs<
+    Mersenne31,
+    Mersenne31,
+    HWMonolithHash,
+    HWMonolithCompression,
+    1,
+>;
+pub(crate) type HWMonolithStarkConfig<DFT> = StarkConfig<
+    TwoAdicFriPcs<
+        Mersenne31,
+        DFT,
+        HWMonolithMerkleMmcs,
+        ExtensionMmcs<Mersenne31, BinomialExtensionField<Mersenne31, 3>, HWMonolithMerkleMmcs>,
+    >,
+    BinomialExtensionField<Mersenne31, 3>,
+    DuplexChallenger<Mersenne31, HWMonolith, 2, 1>,
+>;
+pub(crate) type HWMonolithCircleStarkConfig<EF> = StarkConfig<
+    CirclePcs<
+        Mersenne31,
+        HWMonolithMerkleMmcs,
+        ExtensionMmcs<Mersenne31, BinomialExtensionField<Mersenne31, 3>, HWMonolithMerkleMmcs>,
+    >,
+    EF,
+    DuplexChallenger<Mersenne31, HWMonolith, 2, 1>,
+>;
 
 // Types related to using Poseidon2 in the Merkle tree.
 pub(crate) type Poseidon2Sponge<Perm24> = PaddingFreeSponge<Perm24, 24, 16, 8>;
 pub(crate) type Poseidon2Compression<Perm16> = TruncatedPermutation<Perm16, 2, 8, 16>;
 pub(crate) type Poseidon2MerkleMmcs<F, Perm16, Perm24> = MerkleTreeMmcs<
-    <F as Field>::Packing,
-    <F as Field>::Packing,
+    F,
+    F,
     Poseidon2Sponge<Perm24>,
     Poseidon2Compression<Perm16>,
     8,

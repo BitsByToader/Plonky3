@@ -1,0 +1,13 @@
+[package]
+name = "hw-monolith"
+version = "0.1.0"
+edition = "2024"
+
+[build-dependencies]
+cc = "1.2.21"
+
+[dependencies]
+p3-field.workspace = true
+p3-mersenne-31.workspace = true
+p3-symmetric.workspace = true
+cty = "0.2.2"

@@ -7,10 +7,9 @@ use alloc::borrow::ToOwned;
 use alloc::vec::Vec;
 
 use p3_field::integers::QuotientMap;
-use p3_field::{PackedValue, PrimeCharacteristicRing, PrimeField32};
-// use p3_mds::MdsPermutation;
-use p3_mersenne_31::{Mersenne31, PackedMersenne31Neon};
-use p3_symmetric::{CryptographicHasher, CryptographicPermutation, Permutation};
+use p3_field::{PrimeCharacteristicRing, PrimeField32};
+use p3_mersenne_31::Mersenne31;
+use p3_symmetric::{CryptographicPermutation, Permutation};
 use sha3::digest::{ExtendableOutput, Update};
 use sha3::{Shake128, Shake128Reader};
 
@@ -192,23 +191,6 @@ impl<const WIDTH: usize, const NUM_FULL_ROUNDS: usize> Permutation<[Mersenne31; 
     }
 }
 impl<const WIDTH: usize, const NUM_FULL_ROUNDS: usize> CryptographicPermutation<[Mersenne31; WIDTH]> for MonolithMersenne31<WIDTH, NUM_FULL_ROUNDS> {
-}
-
-impl<const WIDTH: usize, const NUM_FULL_ROUNDS: usize> Permutation<[PackedMersenne31Neon; WIDTH]> for MonolithMersenne31<WIDTH, NUM_FULL_ROUNDS> {
-    fn permute_mut(&self, input: &mut [PackedMersenne31Neon; WIDTH]) {
-        let mut unpacked: [Mersenne31; WIDTH] = [Mersenne31::new_checked(0).unwrap(); WIDTH];
-        for i in 0..WIDTH {
-            unpacked[i] = input[i].0[0];
-        }
-
-        self.permutation(&mut unpacked);
-        
-        for i in 0..WIDTH {
-            input[i] = PackedMersenne31Neon::from(unpacked[i]);
-        }
-    }
-}
-impl<const WIDTH: usize, const NUM_FULL_ROUNDS: usize> CryptographicPermutation<[PackedMersenne31Neon; WIDTH]> for MonolithMersenne31<WIDTH, NUM_FULL_ROUNDS> {
 }
 
 #[cfg(test)]

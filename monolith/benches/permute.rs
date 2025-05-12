@@ -2,20 +2,18 @@ use core::array;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use p3_field::PrimeCharacteristicRing;
-use p3_mds::MdsPermutation;
-use p3_mersenne_31::{MdsMatrixMersenne31, Mersenne31};
-use p3_monolith::MonolithMersenne31;
+use p3_mersenne_31::Mersenne31;
+use p3_monolith::{MonolithMdsMatrixMersenne31, MonolithMersenne31};
 
 fn bench_monolith(c: &mut Criterion) {
-    monolith::<_, 12>(c, MdsMatrixMersenne31);
-    monolith::<_, 16>(c, MdsMatrixMersenne31);
+    monolith::<12>(c);
+    monolith::<16>(c);
 }
 
-fn monolith<Mds, const WIDTH: usize>(c: &mut Criterion, mds: Mds)
-where
-    Mds: MdsPermutation<Mersenne31, WIDTH>,
+fn monolith<const WIDTH: usize>(c: &mut Criterion)
 {
-    let monolith: MonolithMersenne31<_, WIDTH, 5> = MonolithMersenne31::new(mds);
+    let mds = MonolithMdsMatrixMersenne31::<5>;
+    let monolith: MonolithMersenne31<WIDTH, 5> = MonolithMersenne31::new(mds);
 
     let mut input = array::from_fn(Mersenne31::from_usize);
 

@@ -2,9 +2,6 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
-mod monolith_perm_bindings;
-use monolith_perm_bindings::*;
-
 use std::io::{BufRead, BufReader};
 use std::fs::File;
 
@@ -14,6 +11,8 @@ use std::thread::sleep;
 use p3_mersenne_31::*;
 use p3_monolith::*;
 use rand::Rng;
+
+use hw_monolith::*;
 
 /// The Mersenne31 prime
 const P: u32 = (1 << 31) - 1;
@@ -124,6 +123,7 @@ fn benchmark_monolith() {
         }
         let elapsed = now.elapsed();
         println!("Elapsed: {:.2?}", elapsed);
+        println!("Throughput: {:.2} hash/sec", (RUNS as f64)/elapsed.as_secs_f64());
     }
 }
 
@@ -144,11 +144,10 @@ fn check_one_input(smth: u32) {
     // println!();
 }
 
-unsafe fn benchmark_and_check_hw_monolith() {
+fn benchmark_and_check_hw_monolith() {
     use std::time::Instant;
     
-    let mut mapped_monolith = map_monolith();
-    let mapped_monolith_ptr = &raw mut mapped_monolith;
+    let mapped_monolith = HWMonolith::new();
 
     let mds = MonolithMdsMatrixMersenne31::<6>;
     let monolith: MonolithMersenne31<16, 6> = MonolithMersenne31::new(mds);
@@ -162,7 +161,7 @@ unsafe fn benchmark_and_check_hw_monolith() {
 
     let now = Instant::now();
     for i in 0..RUNS {
-        outputs[i] = monolith_hash(mapped_monolith_ptr, inputs[i]);
+        outputs[i] = mapped_monolith.hash(inputs[i]);
     }
     let elapsed = now.elapsed();
     
@@ -186,7 +185,7 @@ unsafe fn benchmark_and_check_hw_monolith() {
     }
     println!("Misses: {misses}.");
 
-    unmap_monolith(mapped_monolith_ptr);
+    // Hardware Accelerator is automatically unmapped when HWMonolith struct is dropped.
 }
 
 fn main() {
@@ -209,5 +208,5 @@ fn main() {
     // check_one_input(0x267260e1);
     
     // Benchmakrs one milion Monolith hashes executed using accelerator and check its outputs afterwards.
-    unsafe { benchmark_and_check_hw_monolith() };
+    benchmark_and_check_hw_monolith();
 }

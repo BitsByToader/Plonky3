@@ -1,4 +1,5 @@
 use clap::Parser;
+use hw_monolith::HWMonolith;
 use p3_baby_bear::{BabyBear, GenericPoseidon2LinearLayersBabyBear, Poseidon2BabyBear};
 use p3_blake3_air::Blake3Air;
 use p3_dft::Radix2DitParallel;
@@ -6,8 +7,7 @@ use p3_examples::airs::ProofObjective;
 use p3_examples::dfts::DftChoice;
 use p3_examples::parsers::{DftOptions, FieldOptions, MerkleHashOptions, ProofOptions};
 use p3_examples::proofs::{
-    prove_m31_keccak, prove_m31_poseidon2, prove_monty31_keccak, prove_monty31_poseidon2,
-    report_result,
+    prove_m31_hwmonolith, prove_m31_keccak, prove_m31_poseidon2, prove_monty31_keccak, prove_monty31_poseidon2, report_result
 };
 use p3_field::extension::BinomialExtensionField;
 use p3_keccak_air::KeccakAir;
@@ -143,7 +143,8 @@ fn main() {
                     );
                     report_result(result);
                 }
-                MerkleHashOptions::Monolith31 => panic!("Unuspported options: Monolith31 only supports Mersenn31.")
+                MerkleHashOptions::Monolith31 => panic!("Unuspported options: Monolith31 only supports Mersenn31."),
+                MerkleHashOptions::HWMonolith31 => panic!("Unuspported options: HWMonolith only supports Mersenn31.")
             };
         }
         FieldOptions::BabyBear => {
@@ -197,7 +198,8 @@ fn main() {
                     );
                     report_result(result);
                 }
-                MerkleHashOptions::Monolith31 => panic!("Unsupported option: Monolith31 only supports Mersenn31.")
+                MerkleHashOptions::Monolith31 => panic!("Unsupported option: Monolith31 only supports Mersenne31."),
+                MerkleHashOptions::HWMonolith31 => panic!("Unsupported option: HWMonolith only supports Mersenne31.")
             };
         }
         FieldOptions::Mersenne31 => {
@@ -258,6 +260,11 @@ fn main() {
                     let result = prove_m31_poseidon2::<_, EF, _, _, _>(
                         proof_goal, num_hashes, perm16, perm24,
                     );
+                    report_result(result);
+                }
+                MerkleHashOptions::HWMonolith31 => {
+                    let monolith = HWMonolith::new();
+                    let result = prove_m31_hwmonolith(proof_goal, num_hashes, monolith);
                     report_result(result);
                 }
             };

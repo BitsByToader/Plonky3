@@ -38,13 +38,13 @@ void unmap_monolith(MappedMonolith *map) {
     map->dev_mem_fd = -1;
 }
 
-uint32_t monolith_hash(MappedMonolith *acc, uint32_t input) {
-    acc->base[0] = (input << 1) | 1;
+uint32_t monolith_hash(MappedMonolith acc, uint32_t input) {
+    acc.base[0] = (input << 1) | 1;
 
     // Example: For a million computations, about 20-30 calls to this function will return the value from the prev call without this fine tuning code.
     // Below two lines should force flush previous write. 
-    volatile uint32_t tmp1 = acc->base[0];
-    volatile uint32_t tmp2 = acc->base[2]; 
+    volatile uint32_t tmp1 = acc.base[0];
+    volatile uint32_t tmp2 = acc.base[2]; 
     
     // Sleep here as to let writes propagate through the OS to the hardware.
     // The peripheral will set the valid flag to 0 when the value changes, earlier reads to the output will read the previous output (BAD!).
@@ -57,7 +57,7 @@ uint32_t monolith_hash(MappedMonolith *acc, uint32_t input) {
     }
 
     while(1) {
-        volatile uint32_t read_value = acc->base[2];
+        volatile uint32_t read_value = acc.base[2];
         volatile uint32_t output = read_value >> 1;
         volatile uint32_t valid = read_value & 1;
 
@@ -65,15 +65,15 @@ uint32_t monolith_hash(MappedMonolith *acc, uint32_t input) {
 	}
 };
 
-uint32_t monolith_compress(MappedMonolith *acc, uint32_t input1, uint32_t input2) {
-    acc->base[1] = (input2 << 1) | 1;
-    acc->base[0] = (input1 << 1) | 1;
+uint32_t monolith_compress(MappedMonolith acc, uint32_t input1, uint32_t input2) {
+    acc.base[1] = (input2 << 1) | 1;
+    acc.base[0] = (input1 << 1) | 1;
 
     // Example: For a million computations, about 20-30 calls to this function will return the value from the prev call without this fine tuning code.
     // Below two lines should force flush previous write. 
-    volatile uint32_t tmp2 = acc->base[1];
-    volatile uint32_t tmp1 = acc->base[0];
-    volatile uint32_t tmp3 = acc->base[2]; 
+    volatile uint32_t tmp2 = acc.base[1];
+    volatile uint32_t tmp1 = acc.base[0];
+    volatile uint32_t tmp3 = acc.base[2]; 
     
     // Sleep here as to let writes propagate through the OS to the hardware.
     // The peripheral will set the valid flag to 0 when the value changes, earlier reads to the output will read the previous output (BAD!).
@@ -86,7 +86,7 @@ uint32_t monolith_compress(MappedMonolith *acc, uint32_t input1, uint32_t input2
     }
 
     while(1) {
-        volatile uint32_t read_value = acc->base[2];
+        volatile uint32_t read_value = acc.base[2];
         volatile uint32_t output = read_value >> 1;
         volatile uint32_t valid = read_value & 1;
 

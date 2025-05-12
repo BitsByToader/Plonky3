@@ -1,5 +1,6 @@
 use core::fmt::Debug;
 
+use hw_monolith::HWMonolith;
 use p3_challenger::{DuplexChallenger,SerializingChallenger32};
 use p3_circle::CirclePcs;
 use p3_commit::ExtensionMmcs;
@@ -16,7 +17,7 @@ use rand::prelude::Distribution;
 
 use crate::airs::ExampleHashAir;
 use crate::types::{
-    KeccakCircleStarkConfig, KeccakCompressionFunction, KeccakMerkleMmcs, KeccakStarkConfig, Poseidon2CircleStarkConfig, Poseidon2Compression, Poseidon2MerkleMmcs, Poseidon2Sponge, Poseidon2StarkConfig
+    HWMonolithCircleStarkConfig, HWMonolithCompression, HWMonolithHash, HWMonolithMerkleMmcs, KeccakCircleStarkConfig, KeccakCompressionFunction, KeccakMerkleMmcs, KeccakStarkConfig, Poseidon2CircleStarkConfig, Poseidon2Compression, Poseidon2MerkleMmcs, Poseidon2Sponge, Poseidon2StarkConfig
 };
 
 /// Produce a MerkleTreeMmcs which uses the KeccakF permutation.
@@ -39,8 +40,8 @@ const fn get_keccak_mmcs<F: Field>() -> KeccakMerkleMmcs<F> {
 /// but this can easily be generalised in future if we desire.
 const fn get_poseidon2_mmcs<
     F: Field,
-    Perm16: CryptographicPermutation<[F; 16]> + CryptographicPermutation<[F::Packing; 16]>,
-    Perm24: CryptographicPermutation<[F; 24]> + CryptographicPermutation<[F::Packing; 24]>,
+    Perm16: CryptographicPermutation<[F; 16]>,
+    Perm24: CryptographicPermutation<[F; 24]>,
 >(
     perm16: Perm16,
     perm24: Perm24,
@@ -50,6 +51,12 @@ const fn get_poseidon2_mmcs<
     let compress = Poseidon2Compression::new(perm16);
 
     Poseidon2MerkleMmcs::<F, _, _>::new(hash, compress)
+}
+
+fn get_hwmonolith_mmcs(hw: HWMonolith) -> HWMonolithMerkleMmcs {
+    let hash = HWMonolithHash::new(hw.clone());
+    let compress = HWMonolithCompression::new(hw.clone());
+    HWMonolithMerkleMmcs::new(hash, compress)
 }
 
 /// Prove the given ProofGoal using the Keccak hash function to build the merkle tree.
@@ -178,8 +185,8 @@ pub fn prove_m31_keccak<
 pub fn prove_m31_poseidon2<
     F: PrimeField64 + ComplexExtendable,
     EF: ExtensionField<F>,
-    Perm16: CryptographicPermutation<[F; 16]> + CryptographicPermutation<[F::Packing; 16]>,
-    Perm24: CryptographicPermutation<[F; 24]> + CryptographicPermutation<[F::Packing; 24]>,
+    Perm16: CryptographicPermutation<[F; 16]>,
+    Perm24: CryptographicPermutation<[F; 24]>,
     PG: ExampleHashAir<F, Poseidon2CircleStarkConfig<F, EF, Perm16, Perm24>>,
 >(
     proof_goal: PG,
@@ -207,6 +214,38 @@ where
 
     verify(&config, &proof_goal, &proof, &vec![])
 }
+
+
+
+#[inline]
+pub fn prove_m31_hwmonolith<
+>(
+    proof_goal: impl ExampleHashAir<Mersenne31, HWMonolithCircleStarkConfig<BinomialExtensionField<Mersenne31, 3>>>,
+    num_hashes: usize,
+    hw: HWMonolith
+) -> Result<(), impl Debug>
+where
+    StandardUniform: Distribution<Mersenne31>,
+{
+
+    let val_mmcs = get_hwmonolith_mmcs(hw.clone());
+
+    let challenge_mmcs = ExtensionMmcs::<Mersenne31, BinomialExtensionField<Mersenne31, 3>, _>::new(val_mmcs.clone());
+    let fri_config = create_benchmark_fri_config(challenge_mmcs);
+
+    let trace = proof_goal.generate_trace_rows(num_hashes, fri_config.log_blowup);
+
+    let pcs = CirclePcs::new(val_mmcs, fri_config);
+    let challenger = DuplexChallenger::new(hw.clone());
+
+    let config = HWMonolithCircleStarkConfig::new(pcs, challenger);
+
+    let proof = prove(&config, &proof_goal, trace, &vec![]);
+    report_proof_size(&proof);
+
+    verify(&config, &proof_goal, &proof, &vec![])
+}
+
 
 /// Report the result of the proof.
 ///

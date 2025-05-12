@@ -28,7 +28,7 @@ MappedMonolith map_monolith();
  */
 void unmap_monolith(MappedMonolith *map);
 
-uint32_t monolith_hash(MappedMonolith *acc, uint32_t input);
-uint32_t monolith_compress(MappedMonolith *acc, uint32_t input1, uint32_t input2);
+uint32_t monolith_hash(MappedMonolith acc, uint32_t input);
+uint32_t monolith_compress(MappedMonolith acc, uint32_t input1, uint32_t input2);
 
 #endif

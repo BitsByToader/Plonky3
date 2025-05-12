@@ -33,7 +33,8 @@ pub enum DftOptions {
 pub enum MerkleHashOptions {
     KeccakF,
     Poseidon2,
-    Monolith31
+    Monolith31,
+    HWMonolith31
 }
 
 /// Produce a collection of PossibleValue's for an Enum variant.
@@ -133,7 +134,7 @@ impl ValueEnum for DftOptions {
 
 impl ValueEnum for MerkleHashOptions {
     fn value_variants<'a>() -> &'a [Self] {
-        &[Self::Poseidon2, Self::KeccakF, Self::Monolith31]
+        &[Self::Poseidon2, Self::KeccakF, Self::Monolith31, Self::HWMonolith31]
     }
 
     fn to_possible_value(&self) -> Option<PossibleValue> {
@@ -144,6 +145,9 @@ impl ValueEnum for MerkleHashOptions {
             }
             Self::Monolith31 => {
                 get_aliases("monolith-31", 1, Some(vec![("monolith31", 10), ("m31", 3)]))
+            }
+            Self::HWMonolith31 => {
+                get_aliases("hwmonolith", 1, Some(vec![("hwmonolith31", 10), ("hwm31", 3)]))
             }
         })
     }

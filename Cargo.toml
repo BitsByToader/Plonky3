@@ -33,7 +33,7 @@ members = [
     "symmetric",
     "util",
     "uni-stark",
-    "playground",
+    "playground", "hw_monolith",
 ]
 
 [workspace.dependencies]
@@ -96,6 +96,7 @@ p3-symmetric = { path = "symmetric", version = "0.1.0" }
 p3-uni-stark = { path = "uni-stark", version = "0.1.0" }
 p3-util = { path = "util", version = "0.1.0" }
 p3-monolith = { path = "monolith", version = "0.1.0" }
+hw-monolith = { path = "hw_monolith", version = "0.1.0" }
 
 [profile.profiling]
 inherits = "release"
