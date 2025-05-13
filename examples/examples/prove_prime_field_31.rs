@@ -264,7 +264,7 @@ fn main() {
                 }
                 MerkleHashOptions::HWMonolith31 => {
                     let monolith = HWMonolith::new();
-                    let result = prove_m31_hwmonolith(proof_goal, num_hashes, monolith);
+                    let result = prove_m31_hwmonolith(proof_goal, num_hashes, monolith.clone());
                     report_result(result);
                 }
             };

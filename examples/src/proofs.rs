@@ -55,7 +55,7 @@ const fn get_poseidon2_mmcs<
 
 fn get_hwmonolith_mmcs(hw: HWMonolith) -> HWMonolithMerkleMmcs {
     let hash = HWMonolithHash::new(hw.clone());
-    let compress = HWMonolithCompression::new(hw.clone());
+    let compress = HWMonolithCompression::new(hw);
     HWMonolithMerkleMmcs::new(hash, compress)
 }
 
@@ -236,7 +236,7 @@ where
     let trace = proof_goal.generate_trace_rows(num_hashes, fri_config.log_blowup);
 
     let pcs = CirclePcs::new(val_mmcs, fri_config);
-    let challenger = DuplexChallenger::new(hw.clone());
+    let challenger = DuplexChallenger::new(hw);
 
     let config = HWMonolithCircleStarkConfig::new(pcs, challenger);
 
