@@ -147,7 +147,7 @@ fn check_one_input(smth: u32) {
 fn benchmark_and_check_hw_monolith() {
     use std::time::Instant;
     
-    let mapped_monolith = HWMonolith::new();
+    let mut mapped_monolith = HWMonolith::new();
 
     let mds = MonolithMdsMatrixMersenne31::<6>;
     let monolith: MonolithMersenne31<16, 6> = MonolithMersenne31::new(mds);
@@ -184,6 +184,8 @@ fn benchmark_and_check_hw_monolith() {
         }
     }
     println!("Misses: {misses}.");
+
+    unsafe { mapped_monolith.unmap(); }
 
     // Hardware Accelerator is automatically unmapped when HWMonolith struct is dropped.
 }

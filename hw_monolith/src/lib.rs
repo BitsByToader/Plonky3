@@ -32,6 +32,13 @@ impl HWMonolith {
         let hw = mtx_binding.lock().unwrap();
         unsafe { monolith_compress(hw.to_owned(), input1, input2) }
     }
+
+    pub unsafe fn unmap(&mut self) {
+        unmap_monolith(&raw mut self.hw);
+        println!("----------------");
+        println!("UNMAPPED HW ACC!");
+        println!("----------------");
+    }
 }
 
 impl Permutation<[Mersenne31; 1]> for HWMonolith {
@@ -55,12 +62,3 @@ impl CryptographicPermutation<[Mersenne31; 2]> for HWMonolith {
 }
 
 unsafe impl Sync for HWMonolith {}
-
-impl Drop for HWMonolith {
-    fn drop(&mut self) {
-        unsafe { unmap_monolith(&raw mut self.hw); }
-        println!("------------------------");
-        println!("Unmapped HW ACC!");
-        println!("------------------------");
-    }
-}
