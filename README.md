@@ -5,6 +5,10 @@
 
 Plonky3 is a toolkit which provides a set of primitives, such as polynomial commitment schemes, for implementing polynomial IOPs (PIOPs). It is mainly used to power STARK-based zkVMs, though in principle it may be used for PLONK-based circuits or other PIOPs.
 
+This fork extends the toolkit provided by Polygon with a driver for a Monolith hash hardware accelerator.
+The accelerator is loaded onto an FPGA, and mapped into the host's memory (a Zynq SoC).
+The provided benchmark is extended to use the accelerator in order to measure the effects of using custom sillicon for resource-constrained edge IoT devices.
+
 For questions or discussions, please use the Telegram group, [t.me/plonky3](https://t.me/plonky3).
 
 
@@ -74,7 +78,7 @@ Currently the options for the command line arguments are:
 - `--objective` (`-o`): `blake-3-permutations, poseidon-2-permutations, keccak-f-permutations`.
 - `--log-trace-length` (`-l`): Accepts any integer between `0` and `255`. The number of permutations proven is `trace_length, 8*trace_length` and `trace_length/24` for `blake3, poseidon2` and `keccakf` respectively. 
 - `--discrete-fourier-transform` (`-d`): `radix-2-dit-parallel, recursive-dft`. This option should be omitted if the field choice is `mersenne-31` as the circle stark currently only supports a single discrete fourier transform.
-- `--merkle-hash` (`-m`): `poseidon-2, keccak-f`.
+- `--merkle-hash` (`-m`): `poseidon-2`, `keccak-f`, `monolith-31`, `hwmonolith`.
 
 Extra speedups may be possible with some configuration changes:
 - `JEMALLOC_SYS_WITH_MALLOC_CONF=retain:true,dirty_decay_ms:-1,muzzy_decay_ms:-1` will cause jemalloc to hang on to virtual memory. This may not affect the very first proof much, but can help significantly with subsequent proofs as fewer pages (if any) will need to be newly assigned by the OS. These settings might not be suitable for all production environments, e.g. if the process' virtual memory is limited by `ulimit` or `max_map_count`.
