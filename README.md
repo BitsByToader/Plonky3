@@ -9,6 +9,8 @@ This fork extends the toolkit provided by Polygon with a driver for a Monolith h
 The accelerator is loaded onto an FPGA, and mapped into the host's memory (a Zynq SoC).
 The provided benchmark is extended to use the accelerator in order to measure the effects of using custom sillicon for resource-constrained edge IoT devices.
 
+For more information, check out the sister repo [here](https://github.com/BitsByToader/monolith_hw_acc).
+
 For questions or discussions, please use the Telegram group, [t.me/plonky3](https://t.me/plonky3).
 
 
